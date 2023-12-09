@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const Post = require("../models/postsModel");
+const User = require("../models/userModel");
 
 const createPost = asyncHandler(async (req, res) => {
   const {content} = await req.body;
@@ -19,13 +20,14 @@ const getAllPosts = asyncHandler(async (req, res) => {
   res.status(200).json(posts);
 });
 
-const getUserPosts = asyncHandler(async (req, res) => {
-  const userPosts = await Post.find({userId: req.user._id});
-  res.status(200).json(userPosts);
-});
-
 const getPost = asyncHandler(async (req, res) => {
-  const post = await Post.findById(req.params.postId).populate("user").populate("comments");
+  const post = await Post.findById(req.params.postId)
+    .populate("user")
+    .populate({path: "comments", populate: {path: "user"}})
+    .exec();
+  post.comments.map(async (item) => {
+    item.user = await User.findById(item.user);
+  });
   res.status(200).json(post);
 });
 const commentPost = asyncHandler(async (req, res) => {
@@ -47,4 +49,4 @@ const getAllComments = asyncHandler(async (req, res) => {
   const comments = await Post.findById(postId).populate("comments");
   res.status(200).json(comments);
 });
-module.exports = {createPost, getAllPosts, getUserPosts, commentPost, getAllComments, getPost};
+module.exports = {createPost, getAllPosts, commentPost, getAllComments, getPost};
